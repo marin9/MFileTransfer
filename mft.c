@@ -11,7 +11,7 @@
 #include "mft.h"
 
 
-void ClientHandler(int sock, struct sockaddr_in *addr, char *wdir, int ewrite){
+void ClientHandler(int sock, char *wdir, int ewrite){
 	char path[NAMELEN];	
 	char buffer[REQLEN];
 	int noffset=1+sizeof(long);
@@ -101,7 +101,7 @@ void WriteFile(int sock, char *path, long size, int ewrite){
 		
 		int w=fwrite(buffer, 1, n, file);
 		if(w!=n){
-			SendError(sock, "Write data fail: %s", strerror(errno));
+			SendError(sock, strerror(errno));
 			fclose(file);
 			remove(path);
 			return;	
@@ -155,7 +155,7 @@ void ServerRemoveFile(int sock, char *path, int ewrite){
 		
 		char buffer[REQLEN];
 		buffer[0]=OK;
-		Send(sock, bufferk, REQLEN);
+		Send(sock, buffer, REQLEN);
 		close(sock);	
 		
 	}else{
@@ -190,14 +190,68 @@ void SendError(int sock, char *msg){
 
 
 void SendFile(struct sockaddr_in *addr, char *name){
+	FILE *file=fopen(name, "rb");
+	if(file==NULL){
+		printf("\x1B[33mWARNING:\x1B[0m fopen() %s\n", strerror(errno));
+		return;
+	}
 	
+	int sock=SocketTCP();
 	
+	int s=connect(sock, (struct sockaddr*)addr, sizeof(struct sockaddr_in));
+	if(s!=0){
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
+		return;
+	}
 	
+	char buffer[BUFFLEN];
+	int noffset=1+sizeof(long);
+	buffer[0]=WRITE;
+	strcpy(buffer+noffset, name);
 	
+	if(!Send(sock, buffer, REQLEN)){
+		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		close(sock);
+		return;
+	}
 	
+	if(!Recv(sock, buffer, REQLEN)){
+		printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+		close(sock);
+		return;
+	}
 	
+	if(buffer[0]!=OK){
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", buffer+1);
+		close(sock);
+		return;
+	}
 	
-	//TODO
+	fseek(file, 0L, SEEK_END);
+	long size=ftell(file);
+	fseek(file, 0L, SEEK_SET);
+	
+	while(size!=0){
+		int n=fread(buffer, 1, BUFFLEN, file);
+		if(n<1){
+			printf("\x1B[33mWARNING:\x1B[0m fread() %s\n", strerror(errno));
+			close(sock);
+			fclose(file);
+			return;
+		}
+		
+		if(!Send(sock, buffer, n)){
+			printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+			close(sock);
+			fclose(file);
+			return;
+		}
+		size-=n;
+	}
+	
+	printf("\x1B[32mFINISH\x1B[0m \n");
+	close(sock);
+	fclose(file);
 }
 
 void ReceiveFile(struct sockaddr_in *addr, char *name){
@@ -258,7 +312,13 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 		}
 		
 		size-=n;		
-		fwrite(buffer, 1, n, file);
+		if(fwrite(buffer, 1, n, file)!=(unsigned int)n){
+			printf("\x1B[33mWARNING:\x1B[0m fwrite() %s\n", strerror(errno));
+			close(sock);
+			fclose(file);
+			remove(name);
+			return;
+		}
 	}
 	
 	printf("\x1B[32mFINISH\x1B[0m \n");

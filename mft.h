@@ -13,7 +13,7 @@
 #define REQLEN		256
 
 
-void ClientHandler(int sock, struct sockaddr_in *addr, char *wdir, int ewrite);
+void ClientHandler(int sock, char *wdir, int ewrite);
 void ReadFile(int sock, char *path);
 void WriteFile(int sock, char *path, long size, int ewrite);
 void SendDir(int sock, char *path);

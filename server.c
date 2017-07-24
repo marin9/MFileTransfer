@@ -14,7 +14,7 @@
 
 pid_t CreateProcess();
 void GetOpt(int argc, char **argv);
-void RegisterClient(int csock, struct sockaddr_in *addr);
+void RegisterClient(int csock);
 void sigchld_handler();
 void SetSigActions();
 void SetChildSigActions();
@@ -33,7 +33,7 @@ pid_t *clients;
 
 int main(int argc, char **argv){
 	GetOpt(argc, argv);
-	//Daemon(); response packet identifier bit
+	//Daemon(); 
 	openlog("MFT_SERVER", LOG_PID, LOG_DAEMON);
 	syslog(LOG_INFO, "MFT server started.");
 	syslog_on=1;
@@ -54,7 +54,7 @@ int main(int argc, char **argv){
 		int csock=Accept(sock, &addr, &len);
 		if(csock<0) continue;
 
-		RegisterClient(csock, &addr);
+		RegisterClient(csock);
 	}
 	return 0;
 }
@@ -117,7 +117,7 @@ pid_t CreateProcess(){
 	else return s;
 }
 
-void RegisterClient(int csock, struct sockaddr_in *addr){
+void RegisterClient(int csock){
 	int i;
 
 	for(i=0;i<MAXCLIENT;++i){
@@ -127,7 +127,7 @@ void RegisterClient(int csock, struct sockaddr_in *addr){
 				close(sock);
 
 				SetChildSigActions();
-				ClientHandler(csock, addr, WDIR, EWRITE);
+				ClientHandler(csock, WDIR, EWRITE);
 
 				exit(0);
 			}else{
