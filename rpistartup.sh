@@ -6,7 +6,7 @@ gpio mode 29 in
 gpio mode 28 out
 gpio write 28 1
 
-#TODO mount sdx /mnt
+sudo mount /dev/sda /mnt
 
 S=$(echo $?)
 if [ "$S" -eq 0 ]; then
@@ -15,12 +15,12 @@ if [ "$S" -eq 0 ]; then
 		#write on
 		gpio write 24 0
 		gpio write 25 1
-		/home/pi/MFileTransfer/mftserverr -m 4 -w &
+		/home/pi/MFileTransfer/mftserver -m 4 -d /mnt/server -w &
 	else
 		#read only
 		gpio write 24 1
 		gpio write 25 0
-		/home/pi/MFileTransfer/mftserverr -m 4 &
+		/home/pi/MFileTransfer/mftserver -m 4 -d /mnt/server &
 	fi
 else
 	echo "ERROR: Disc mount fail." > errlog.txt
@@ -38,13 +38,17 @@ while true; do
 		S=$(gpio read 23)
 		if [ "$S" -eq 1 ]; then
 			echo "Restart..."
+			sync
+			sudo umount /dev/sda
 			sleep 1
-			shutdown -r -t 00		
+			shutdown -r -t 00
 		else
 			echo "Shutdown..."
+			sync
+			sudo umount /dev/sda
 			sleep 1
 			shutdown -h -t 00
-		fi	
+		fi
 		break
 	fi
 	sleep .1
