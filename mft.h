@@ -6,7 +6,7 @@
 #define LIST	2
 #define REMOVE	3
 
-#define BUFFLEN		4096
+#define BUFFLEN		65536
 #define REQLEN		256
 
 
