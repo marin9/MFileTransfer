@@ -34,6 +34,7 @@ pid_t *clients;
 int main(int argc, char **argv){
 	GetOpt(argc, argv);
 	//Daemon(); //TODO  rpistartup.sh mft.c
+	//TODO response packet identifier bit
 	openlog("MFT_SERVER", LOG_PID, LOG_DAEMON);
 	syslog(LOG_INFO, "MFT server started.");
 	syslog_on=1;

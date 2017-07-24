@@ -35,7 +35,30 @@ void ClientHandler(int sock, struct sockaddr_in *addr, char *wdir, int ewrite){
 }
 
 void ReadFile(int sock, char *path){
-	//TODO
+	FILE *file=fopen(path, "rb");
+	if(file==NULL){
+		SendError(sock, strerror(errno));
+		return;	
+	}
+	
+	fseek(file, 0L, SEEK_END);
+	long size=ftell(file);
+	fseek(file, 0L, SEEK_SET);
+	
+	char buffer[BUFFLEN];
+	buffer[0]=1;
+	*((long*)(buffer+1))=size;
+	Send(sock, buffer, REQLEN);
+	
+	
+	while(!feof(file)){
+		int n=fread(buffer, 1, BUFFLEN, file);
+		if(n==0) break;
+		if(!Send(sock, buffer, n)) break;
+	}	
+	
+	close(sock);
+	fclose(file);
 }
 
 void WriteFile(int sock, char *path, int ewrite){
@@ -114,7 +137,68 @@ void SendFile(struct sockaddr_in *addr, char *name){
 }
 
 void ReceiveFile(struct sockaddr_in *addr, char *name){
-	//TODO
+	int sock=SocketTCP();
+	
+	int s=connect(sock, (struct sockaddr*)addr, sizeof(struct sockaddr_in));
+	if(s!=0){
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
+		return;
+	}
+	
+	char buffer[BUFFLEN];
+	buffer[0]=READ;
+	strcpy(buffer+1, name);
+	
+	if(!Send(sock, buffer, REQLEN)){
+		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		close(sock);
+		return;
+	}
+	
+	if(!Recv(sock, buffer, REQLEN)){
+		printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+		close(sock);
+		return;
+	}
+	
+	if(buffer[0]==0){
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", buffer);
+		close(sock);
+		return;
+	}
+	
+	long size=*((long*)(buffer+1));
+	
+	if(isFileExist(name)){
+		printf("\x1B[33mWARNING:\x1B[0m  File already exist.\n");
+		close(sock);
+		return;
+	}
+	
+	FILE *file=fopen(name, "wb");
+	if(file==NULL){
+		printf("\x1B[33mWARNING:\x1B[0m fopen() %s\n", strerror(errno));
+		close(sock);
+		return;
+	}
+	
+	while(size!=0){
+		int n=recv(sock, buffer, BUFFLEN, MSG_NOSIGNAL);
+		if(n<1){
+			printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+			close(sock);
+			fclose(file);
+			remove(name);
+			return;
+		}
+		
+		size-=n;		
+		fwrite(buffer, 1, n, file);
+	}
+	
+	printf("\x1B[32mFINISH\x1B[0m \n");
+	close(sock);
+	fclose(file);
 }
 
 void RemoveFile(struct sockaddr_in *addr, char *name){	
