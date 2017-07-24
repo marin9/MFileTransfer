@@ -14,27 +14,36 @@
 void ClientHandler(int sock, struct sockaddr_in *addr, char *wdir, int ewrite){
 	char path[NAMELEN];	
 	char buffer[REQLEN];
+	int noffset=1+sizeof(long);
+	long size;
 
 	if(!Recv(sock, buffer, REQLEN)){
 		close(sock);
 		return;
 	}
 
-	if((strlen(wdir)+strlen(buffer+1))>=(NAMELEN-1)) return;
+	if((strlen(wdir)+strlen(buffer+noffset))>=(NAMELEN-1)) return;
 	else{
 		strcpy(path, wdir);
 		if(path[strlen(path)-1]!='/') strcat(path, "/");
-		strcat(path, buffer+1);
+		strcat(path, buffer+noffset);
 	}
 	
+	size=*((long*)(buffer+1));
+	
 	if(buffer[0]==READ) ReadFile(sock, path);
-	else if(buffer[0]==WRITE) WriteFile(sock, path, ewrite);
+	else if(buffer[0]==WRITE) WriteFile(sock, path, size, ewrite);
 	else if(buffer[0]==LIST) SendDir(sock, wdir);
 	else if(buffer[0]==REMOVE) ServerRemoveFile(sock, path, ewrite);
 	else SendError(sock, "Illegal command");
 }
 
 void ReadFile(int sock, char *path){
+	if(strstr(path, "..")!=NULL){
+		SendError(sock, "Access violation");
+		return;
+	}
+	
 	FILE *file=fopen(path, "rb");
 	if(file==NULL){
 		SendError(sock, strerror(errno));
@@ -46,10 +55,9 @@ void ReadFile(int sock, char *path){
 	fseek(file, 0L, SEEK_SET);
 	
 	char buffer[BUFFLEN];
-	buffer[0]=1;
+	buffer[0]=OK;
 	*((long*)(buffer+1))=size;
 	Send(sock, buffer, REQLEN);
-	
 	
 	while(!feof(file)){
 		int n=fread(buffer, 1, BUFFLEN, file);
@@ -61,8 +69,50 @@ void ReadFile(int sock, char *path){
 	fclose(file);
 }
 
-void WriteFile(int sock, char *path, int ewrite){
-	//TODO
+void WriteFile(int sock, char *path, long size, int ewrite){
+	if(!ewrite || strstr(path, "..")!=NULL){
+		SendError(sock, "Access violation");
+		return;
+	}
+	
+	if(isFileExist(path)){
+		SendError(sock, "File already exist");
+		return;
+	}
+	
+	FILE *file=fopen(path, "wb");
+	if(file==NULL){
+		SendError(sock, strerror(errno));
+		return;
+	}
+	
+	char buffer[BUFFLEN];
+	buffer[0]=OK;
+	Send(sock, buffer, REQLEN);
+	
+	while(size!=0){
+		int n=recv(sock, buffer, BUFFLEN, MSG_NOSIGNAL);
+		if(n<1){
+			close(sock);
+			fclose(file);
+			remove(path);
+			return;
+		}
+		
+		int w=fwrite(buffer, 1, n, file);
+		if(w!=n){
+			SendError(sock, "Write data fail: %s", strerror(errno));
+			fclose(file);
+			remove(path);
+			return;	
+		}
+		
+		size-=n;
+	}
+	
+	LogAction(sock, path, WRITE);
+	close(sock);
+	fclose(file);
 }
 
 void SendDir(int sock, char *path){
@@ -101,20 +151,11 @@ void ServerRemoveFile(int sock, char *path, int ewrite){
 	}
 	
 	if(!remove(path)){
-		struct sockaddr_in addr;
-		socklen_t len=sizeof(addr);
+		LogAction(sock, path, REMOVE);
 		
-		if(getsockname(sock, (struct sockaddr*)&addr, &len)==-1){
-			syslog(LOG_ERR, "getsockname() fail: %s.\n", strerror(errno));
-			
-		}else{
-			char ip[INET_ADDRSTRLEN];
-			inet_ntop(AF_INET, &(addr.sin_addr), ip, INET_ADDRSTRLEN);
-			syslog(LOG_INFO, "%s:remove:%s", ip, path);
-		}	
-		
-		char ack[REQLEN]={0};
-		Send(sock, ack, REQLEN);
+		char buffer[REQLEN];
+		buffer[0]=OK;
+		Send(sock, bufferk, REQLEN);
 		close(sock);	
 		
 	}else{
@@ -122,9 +163,25 @@ void ServerRemoveFile(int sock, char *path, int ewrite){
 	}
 }
 
+void LogAction(int sock, char* path, int action){
+	struct sockaddr_in addr;
+	socklen_t len=sizeof(addr);
+		
+	if(getsockname(sock, (struct sockaddr*)&addr, &len)==-1){
+		syslog(LOG_ERR, "getsockname() fail: %s.\n", strerror(errno));
+			
+	}else{
+		char ip[INET_ADDRSTRLEN];
+		inet_ntop(AF_INET, &(addr.sin_addr), ip, INET_ADDRSTRLEN);
+		if(action==WRITE) syslog(LOG_INFO, "%s:write:%s", ip, path);
+		else if(action==REMOVE) syslog(LOG_INFO, "%s:remove:%s", ip, path);
+	}
+}
+
 void SendError(int sock, char *msg){
 	char buffer[REQLEN];
-	strcpy(buffer, msg);
+	buffer[0]=ERR;
+	strcpy(buffer+1, msg);
 	Send(sock, buffer, REQLEN);
 	close(sock);
 }
@@ -133,6 +190,13 @@ void SendError(int sock, char *msg){
 
 
 void SendFile(struct sockaddr_in *addr, char *name){
+	
+	
+	
+	
+	
+	
+	
 	//TODO
 }
 
@@ -146,8 +210,9 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 	}
 	
 	char buffer[BUFFLEN];
+	int noffset=1+sizeof(long);
 	buffer[0]=READ;
-	strcpy(buffer+1, name);
+	strcpy(buffer+noffset, name);
 	
 	if(!Send(sock, buffer, REQLEN)){
 		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
@@ -161,8 +226,8 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 		return;
 	}
 	
-	if(buffer[0]==0){
-		printf("\x1B[33mWARNING:\x1B[0m %s\n", buffer);
+	if(buffer[0]!=OK){
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", buffer+1);
 		close(sock);
 		return;
 	}
@@ -211,8 +276,9 @@ void RemoveFile(struct sockaddr_in *addr, char *name){
 	}
 	
 	char buffer[REQLEN];
+	int noffset=1+sizeof(long);
 	buffer[0]=REMOVE;
-	strcpy(buffer+1, name);
+	strcpy(buffer+noffset, name);
 
 	if(!Send(sock, buffer, REQLEN)){
 		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
@@ -226,7 +292,7 @@ void RemoveFile(struct sockaddr_in *addr, char *name){
 		return;
 	}
 		
-	if(buffer[0]!=0) printf("\x1B[33mWARNING:\x1B[0m %s.\n", buffer);
+	if(buffer[0]!=OK) printf("\x1B[33mWARNING:\x1B[0m %s.\n", buffer+1);
 	else printf("\x1B[32mFINISH:\x1B[0m File: %s removed.\n", name);
 	
 	close(sock);

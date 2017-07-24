@@ -37,12 +37,14 @@ while true; do
 		sleep 2
 		S=$(gpio read 23)
 		if [ "$S" -eq 1 ]; then
+			echo ""
 			echo "Restart..."
 			sync
 			sudo umount /dev/sda
 			sleep 1
 			shutdown -r -t 00
 		else
+			echo ""
 			echo "Shutdown..."
 			sync
 			sudo umount /dev/sda
