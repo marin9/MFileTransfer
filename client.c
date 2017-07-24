@@ -19,6 +19,7 @@
 #define CM_PUT		6
 #define CM_REMOVE	7
 #define CM_QUIT		8
+#define CM_CLEAR	9
 
 
 int GetCommand(char *buff);
@@ -54,6 +55,7 @@ int main(){
 		else if(command==CM_GET) ReceiveFile(&addr, buffer);
 		else if(command==CM_PUT) SendFile(&addr, buffer);
 		else if(command==CM_REMOVE) RemoveFile(&addr, buffer);
+		else if(command==CM_CLEAR) printf("\033[H\033[J");
 		else if(command==CM_QUIT) break;
 		else printf("Illegal command. Type 'help' for more info.\n");
 	}
@@ -83,7 +85,7 @@ int GetCommand(char *buff){
 		++j;
 	}
 	buff[j]=0;
-	
+		
 	if(strcmp(command, "help")==0) return CM_HELP;
 	else if(strcmp(command, "port")==0) return CM_PORT;
 	else if(strcmp(command, "host")==0) return CM_SERVER;
@@ -93,6 +95,7 @@ int GetCommand(char *buff){
 	else if(strcmp(command, "put")==0) return CM_PUT;
 	else if(strcmp(command, "rm")==0) return CM_REMOVE;
 	else if(strcmp(command, "quit")==0) return CM_QUIT;
+	else if(strcmp(command, "cl")==0) return CM_CLEAR;
 	else return -1;
 }
 
@@ -106,6 +109,7 @@ void Help(){
 	printf("put:[filename] - put on server file 'filename'\n");
 	printf("rm:[filename] - remove from server file 'filename'\n");
 	printf("quit - exit from program\n");
+	printf("cl - clear terminal\n");
 	printf("Example: server:7999\n");
 }
 
