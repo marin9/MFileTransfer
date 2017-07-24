@@ -14,7 +14,7 @@
 void ClientHandler(int sock, char *wdir, int ewrite){
 	char path[NAMELEN];	
 	char buffer[REQLEN];
-	int noffset=1+sizeof(long);
+	int noffset=9;
 
 	if(!Recv(sock, buffer, REQLEN)){
 		close(sock);
@@ -208,7 +208,7 @@ void SendFile(struct sockaddr_in *addr, char *name){
 	fseek(file, 0L, SEEK_SET);
 	
 	char buffer[BUFFLEN];
-	int noffset=1+sizeof(long);
+	int noffset=9;
 	buffer[0]=WRITE;
 	*((long*)(buffer+1))=size;
 	strcpy(buffer+noffset, name);
@@ -264,7 +264,7 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 	}
 	
 	char buffer[BUFFLEN];
-	int noffset=1+sizeof(long);
+	int noffset=9;
 	buffer[0]=READ;
 	strcpy(buffer+noffset, name);
 	
@@ -336,7 +336,7 @@ void RemoveFile(struct sockaddr_in *addr, char *name){
 	}
 	
 	char buffer[REQLEN];
-	int noffset=1+sizeof(long);
+	int noffset=9;
 	buffer[0]=REMOVE;
 	strcpy(buffer+noffset, name);
 
