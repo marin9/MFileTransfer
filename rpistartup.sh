@@ -13,14 +13,14 @@ if [ "$S" -eq 0 ]; then
 	S=$(gpio read 29)
 	if [ "$S" -eq 1 ]; then
 		#write on
-		gpio write 24 0
-		gpio write 25 1
-		/home/pi/MFileTransfer/mftserver -m 4 -d /mnt/server -w &
-	else
-		#read only
 		gpio write 24 1
 		gpio write 25 0
-		/home/pi/MFileTransfer/mftserver -m 4 -d /mnt/server &
+		/home/pi/MFileTransfer/mftserver -d /mnt/server -w
+	else
+		#read only
+		gpio write 24 0
+		gpio write 25 1
+		/home/pi/MFileTransfer/mftserver -d /mnt/server
 	fi
 else
 	echo "ERROR: Disc mount fail." > errlog.txt
