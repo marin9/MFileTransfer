@@ -15,21 +15,20 @@ void ClientHandler(int sock, char *wdir, int ewrite){
 	char path[NAMELEN];	
 	char buffer[REQLEN];
 	int noffset=1+sizeof(long);
-	long size;
 
 	if(!Recv(sock, buffer, REQLEN)){
 		close(sock);
 		return;
 	}
 
-	if((strlen(wdir)+strlen(buffer+noffset))>=(NAMELEN-1)) return;
+	if((strlen(wdir)+strlen(buffer+noffset))>=(NAMELEN-2)) return;
 	else{
 		strcpy(path, wdir);
 		if(path[strlen(path)-1]!='/') strcat(path, "/");
 		strcat(path, buffer+noffset);
 	}
 	
-	size=*((long*)(buffer+1));
+	long size=*((long*)(buffer+1));
 	
 	if(buffer[0]==READ) ReadFile(sock, path);
 	else if(buffer[0]==WRITE) WriteFile(sock, path, size, ewrite);
@@ -204,9 +203,14 @@ void SendFile(struct sockaddr_in *addr, char *name){
 		return;
 	}
 	
+	fseek(file, 0L, SEEK_END);
+	long size=ftell(file);
+	fseek(file, 0L, SEEK_SET);
+	
 	char buffer[BUFFLEN];
 	int noffset=1+sizeof(long);
 	buffer[0]=WRITE;
+	*((long*)(buffer+1))=size;
 	strcpy(buffer+noffset, name);
 	
 	if(!Send(sock, buffer, REQLEN)){
@@ -226,11 +230,7 @@ void SendFile(struct sockaddr_in *addr, char *name){
 		close(sock);
 		return;
 	}
-	
-	fseek(file, 0L, SEEK_END);
-	long size=ftell(file);
-	fseek(file, 0L, SEEK_SET);
-	
+		
 	while(size!=0){
 		int n=fread(buffer, 1, BUFFLEN, file);
 		if(n<1){
