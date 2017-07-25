@@ -230,7 +230,9 @@ void SendFile(struct sockaddr_in *addr, char *name){
 		close(sock);
 		return;
 	}
-		
+	
+	long Size=size;	
+	int t=0;
 	while(size!=0){
 		int n=fread(buffer, 1, BUFFLEN, file);
 		if(n<1){
@@ -247,6 +249,13 @@ void SendFile(struct sockaddr_in *addr, char *name){
 			return;
 		}
 		size-=n;
+		
+		if(t%500==0){
+			printf("\r%.2f %%", (float)(Size-size)*100/Size);
+			fflush(stdout);
+			t=0;
+		}
+		++t;
 	}
 	
 	printf("\x1B[32mFINISH\x1B[0m \n");
@@ -301,6 +310,8 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 		return;
 	}
 	
+	long Size=size;
+	int t=0;
 	while(size!=0){
 		int n=recv(sock, buffer, BUFFLEN, MSG_NOSIGNAL);
 		if(n<1){
@@ -319,9 +330,16 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 			remove(name);
 			return;
 		}
+					
+		if(t%500==0){
+			printf("\r%.2f %%", (float)(Size-size)*100/Size);
+			fflush(stdout);
+			t=0;
+		}
+		++t;
 	}
 	
-	printf("\x1B[32mFINISH\x1B[0m \n");
+	printf("\r\x1B[32mFINISH\x1B[0m \n");
 	close(sock);
 	fclose(file);
 }

@@ -9,7 +9,7 @@
 #define OK		4
 #define ERR		5
 
-#define BUFFLEN		65536
+#define BUFFLEN		16384
 #define REQLEN		256
 
 
