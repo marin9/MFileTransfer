@@ -258,7 +258,7 @@ void SendFile(struct sockaddr_in *addr, char *name){
 		++t;
 	}
 	
-	printf("\x1B[32mFINISH\x1B[0m \n");
+	printf("\r\x1B[32mFINISH\x1B[0m \n");
 	close(sock);
 	fclose(file);
 }
