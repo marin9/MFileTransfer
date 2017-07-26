@@ -139,7 +139,7 @@ void GetIpFromName(char *name, struct sockaddr_in* addr){
 
 	int s;
 	if((s=getaddrinfo(name, NULL, &hints, &res))!=0){
-		printf("\x1B[33mWARNING:\x1B[0m getaddrinfo() fail: %s\n", gai_strerror(s));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", gai_strerror(s));
 		return;
 	}
 	
@@ -154,7 +154,7 @@ void GetNameFromIP(struct sockaddr_in *addr, char *name){
 
 	int res;
     if((res=getnameinfo((struct sockaddr*)addr, sizeof(struct sockaddr), name, NI_MAXHOST, NULL, 0, NI_NAMEREQD))!=0){
-        printf("\x1B[33mWARNING:\x1B[0m getnameinfo() fail: %s\n", gai_strerror(res));
+        printf("\x1B[33mWARNING:\x1B[0m %s\n", gai_strerror(res));
         name[0]=0;     
     }
 }

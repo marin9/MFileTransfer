@@ -191,7 +191,7 @@ void SendError(int sock, char *msg){
 void SendFile(struct sockaddr_in *addr, char *name){
 	FILE *file=fopen(name, "rb");
 	if(file==NULL){
-		printf("\x1B[33mWARNING:\x1B[0m fopen() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		return;
 	}
 	
@@ -214,13 +214,13 @@ void SendFile(struct sockaddr_in *addr, char *name){
 	strcpy(buffer+noffset, name);
 	
 	if(!Send(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
 	
 	if(!Recv(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
@@ -236,14 +236,14 @@ void SendFile(struct sockaddr_in *addr, char *name){
 	while(size!=0){
 		int n=fread(buffer, 1, BUFFLEN, file);
 		if(n<1){
-			printf("\x1B[33mWARNING:\x1B[0m fread() %s\n", strerror(errno));
+			printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 			close(sock);
 			fclose(file);
 			return;
 		}
 		
 		if(!Send(sock, buffer, n)){
-			printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+			printf("\x1B[33mWARNING:\x1B[0m Connection closed.\n");
 			close(sock);
 			fclose(file);
 			return;
@@ -278,13 +278,13 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 	strcpy(buffer+noffset, name);
 	
 	if(!Send(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
 	
 	if(!Recv(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m Connection closed.\n");
 		close(sock);
 		return;
 	}
@@ -305,7 +305,7 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 	
 	FILE *file=fopen(name, "wb");
 	if(file==NULL){
-		printf("\x1B[33mWARNING:\x1B[0m fopen() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
@@ -315,7 +315,7 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 	while(size!=0){
 		int n=recv(sock, buffer, BUFFLEN, MSG_NOSIGNAL);
 		if(n<1){
-			printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+			printf("\x1B[33mWARNING:\x1B[0m Connection closed.\n");
 			close(sock);
 			fclose(file);
 			remove(name);
@@ -324,7 +324,7 @@ void ReceiveFile(struct sockaddr_in *addr, char *name){
 		
 		size-=n;		
 		if(fwrite(buffer, 1, n, file)!=(unsigned int)n){
-			printf("\x1B[33mWARNING:\x1B[0m fwrite() %s\n", strerror(errno));
+			printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 			close(sock);
 			fclose(file);
 			remove(name);
@@ -359,19 +359,19 @@ void RemoveFile(struct sockaddr_in *addr, char *name){
 	strcpy(buffer+noffset, name);
 
 	if(!Send(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
 		
 	if(!Recv(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
 		
 	if(buffer[0]!=OK) printf("\x1B[33mWARNING:\x1B[0m %s.\n", buffer+1);
-	else printf("\x1B[32mFINISH:\x1B[0m File: %s removed.\n", name);
+	else printf("\x1B[32mFINISH:\x1B[0m %s removed.\n", name);
 	
 	close(sock);
 }
@@ -389,14 +389,14 @@ void PrintFiles(struct sockaddr_in *addr){
 	buffer[0]=LIST;
 	
 	if(!Send(sock, buffer, REQLEN)){
-		printf("\x1B[33mWARNING:\x1B[0m send() %s\n", strerror(errno));
+		printf("\x1B[33mWARNING:\x1B[0m %s\n", strerror(errno));
 		close(sock);
 		return;
 	}
 	
 	while(1){
 		if(!Recv(sock, buffer, REQLEN)){
-			printf("\x1B[33mWARNING:\x1B[0m recv() %s\n", strerror(errno));
+			printf("\x1B[33mWARNING:\x1B[0m Connection closed.\n");
 			close(sock);
 			return;
 		}
